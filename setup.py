@@ -40,6 +40,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'service = node_mgmt_py.node_mgmt:main',
         ],
     },
 )

@@ -1,4 +1,3 @@
-#source code from https://haoguangyang.github.io/robotics%20notes/gists/programmatically-start-stop-nodes/
 # ROS2 launch python api test
 import multiprocessing
 import launch_ros
