@@ -33,7 +33,7 @@ nest_asyncio.apply()
 # Here is an example of three cyclic talkers/listeners
 num_parallel = 3
 # whatever launch description for each node is put in here.
-ld = [LaunchDescription([
+ld_ori = [LaunchDescription([
     launch_ros.actions.Node(
         package='cartographer_ros',
         executable='cartographer_node',
@@ -64,8 +64,9 @@ ld = [LaunchDescription([
     # for i in range(num_parallel)
     ]
 
-for item in ld:
-    print(LaunchIntrospector().format_launch_description(item))
+ld = ld_ori
+# for item in ld:
+#     print(LaunchIntrospector().format_launch_description(item))
 
 # Construct launch service pool. Each launch service can handle one launch description
 # add noninteractive=True to handle sigint
@@ -81,20 +82,28 @@ pPool = [multiprocessing.Process(target=ls.run) for ls in lsPool]
 # starting the stack
 print("Starting everything")
 for p in pPool:
+    print("----->before node starting: "+str(p.pid))
     p.start()
-time.sleep(30)
+    print("----->after node starting: "+str(p.pid))
+time.sleep(10)
 # shutting down the stack
 print("Stopping everything")
+
+# debug
+p = None
+
 for p in pPool:
-    print("stopping: "+str(p.pid))
+    print("----->before node stopping: "+str(p.pid))
     # use SIGINT instead of SIGTERM to stop child processes ahead of launch service
     os.kill(p.pid, signal.SIGINT)
+    print("----->after node stopping: "+str(p.pid))
     # DON'T DO THIS as it will lead to a dirty shutdown with zombie nodes
     # p.terminate()
 for p in pPool:
     p.join()
+    print("----->after p.join(): "+str(p.pid))
 
-time.sleep(30)
+time.sleep(10)
 # re-starting the stack
 # Launch service pool and process pool are non-reusable
 lsPool = [LaunchService(noninteractive=True) for i in ld]
@@ -106,12 +115,15 @@ pPool = [multiprocessing.Process(target=ls.run) for ls in lsPool]
 
 print("Re-Starting everything")
 for p in pPool:
+    print("----->before node restarting: "+str(p.pid))
     p.start()
-time.sleep(30)
+    print("----->after node restarting: "+str(p.pid))
+time.sleep(10)
 print("Stopping everything")
 for p in pPool:
-    print("stopping: "+str(p.pid))
+    print("----->before node stopping again: "+str(p.pid))
     # use SIGINT instead of SIGTERM to stop child processes ahead of launch service
     os.kill(p.pid, signal.SIGINT)
+    print("----->after node stopping again: "+str(p.pid))
 for p in pPool:
     p.join()

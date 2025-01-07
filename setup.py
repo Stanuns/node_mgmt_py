@@ -41,6 +41,7 @@ setup(
     entry_points={
         'console_scripts': [
             'service = node_mgmt_py.node_mgmt:main',
+            'client = node_mgmt_py.node_mgmt_srvcli:main',
         ],
     },
 )
