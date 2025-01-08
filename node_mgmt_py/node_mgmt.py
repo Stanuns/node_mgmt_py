@@ -75,17 +75,17 @@ class NodeMgmt(Node):
     def node_mgmt_callback(self, request, response):
         self.get_logger().info('Incoming request\n node_name: %s action: %s' % (request.node, request.action))
         node_name = request.node
-        pPool = self.get_process_pool(node_name)
+        # pPool = self.get_process_pool(node_name)
 
         if request.action == StartStop.Request().START:
-            self.process_start(pPool, node_name)
+            self.process_start(node_name)
 
         elif request.action == StartStop.Request().STOP:
-            self.process_stop(pPool, node_name)
+            self.process_stop(node_name)
 
         elif request.action == StartStop.Request().RESTART:
 
-            self.process_restart(pPool, node_name)
+            self.process_restart(node_name)
         else:
             pass
 
@@ -116,50 +116,62 @@ class NodeMgmt(Node):
                 self.cartographer_pre_pPool = pPool
             elif ld_name == "navigation2":
                 pass
-
-            return pPool
+            return pPool, if_runnning
         elif if_runnning:
             if ld_name == "cartographer":
-                return self.cartographer_pre_pPool
+                return self.cartographer_pre_pPool, if_runnning 
             elif ld_name == "navigation2":
                 pass
 
 
-    def process_start(self, pPool, node_name):
+    def process_start(self, node_name):
         self.get_logger().info('node start---------------->')
-        if node_name == "cartographer":
-            self.cartographer_running = True
-        elif node_name == "navigation2":
+        pPool, if_runnning = self.get_process_pool(node_name)
+
+        #debug
+        print("----->process_start: "+str(pPool[0].pid))
+
+        if (pPool[0].pid is None) and (not if_runnning): 
+            for p in pPool:
+                print("----->before node starting: "+str(p.pid))
+                p.start()
+                print("----->after node starting: "+str(p.pid))
+
+            if node_name == "cartographer":
+                self.cartographer_running = True
+            elif node_name == "navigation2":
+                pass
+        else:
             pass
 
-        for p in pPool:
-            print("----->before node starting: "+str(p.pid))
-            p.start()
-            print("----->after node starting: "+str(p.pid))
-
-    def process_stop(self, pPool, node_name):
-        if node_name == "cartographer":
-            self.cartographer_running = False
-        elif node_name == "navigation2":
-            pass
-
+    def process_stop(self, node_name):
         self.get_logger().info('node stop---------------->')
-        for p in pPool:
-            print("----->before node stopping: "+str(p.pid))
-            # use SIGINT instead of SIGTERM to stop child processes ahead of launch service
-            os.kill(p.pid, signal.SIGINT)
-        for p in pPool:
-            p.join()
+        pPool, if_runnning = self.get_process_pool(node_name)
 
-    def process_restart(self, pPool, node_name):
+        #debug
+        print("----->process_stop: "+str(pPool[0].pid))
+
+        if (pPool[0].pid is not None) and (if_runnning): 
+            for p in pPool:
+                print("----->before node stopping: "+str(p.pid))
+                # use SIGINT instead of SIGTERM to stop child processes ahead of launch service
+                os.kill(p.pid, signal.SIGINT)
+                print("----->after node stopping: "+str(p.pid))
+            for p in pPool:
+                p.join()
+
+            if node_name == "cartographer":
+                self.cartographer_running = False
+            elif node_name == "navigation2":
+                pass
+        else:
+            pass
+
+    def process_restart(self, node_name):
         self.get_logger().info('node restart---------------->')
-        for p in pPool:
-            os.kill(p.pid, signal.SIGINT)
-        for p in pPool:
-            p.join()
+        self.process_stop(node_name)
         time.sleep(1)
-        for p in pPool:
-            p.start()
+        self.process_start(node_name)
 
 
         
