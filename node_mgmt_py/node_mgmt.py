@@ -32,7 +32,7 @@ class NodeMgmt(Node):
         cartographer_config_dir = LaunchConfiguration('cartographer_config_dir', default=os.path.join(
                                                         cartographer_prefix, 'config'))
         cartographer_configuration_basename = LaunchConfiguration('configuration_basename',
-                                                        default='cartographer_mapping.lua')
+                                                        default='luxsharerobot_cartographer_mapping.lua')
         DeclareLaunchArgument(
             'cartographer_config_dir',
             default_value=cartographer_config_dir,
@@ -46,10 +46,10 @@ class NodeMgmt(Node):
                 package='cartographer_ros',
                 executable='cartographer_node',
                 # output='screen',
-                parameters = [{'use_sim_time': True}],
+                parameters = [{'use_sim_time': False}],
                 arguments=['-configuration_directory', cartographer_config_dir,
                         '-configuration_basename', cartographer_configuration_basename],
-                # remappings=[('chatter', 'my_chatter'+str(i % num_parallel))]
+                remappings=[('/imu', '/imu/data_raw')],
                 ),
             launch_ros.actions.Node(
                 package='cartographer_ros',
@@ -57,17 +57,17 @@ class NodeMgmt(Node):
                 # output='screen',
                 # remappings=[('chatter', 'my_chatter'+str((i+1) % num_parallel))]
                 parameters = [
-                    {'use_sim_time': True},
+                    {'use_sim_time': False},
                     {'resolution': 0.05},
                     {'-publish_period_sec': 1.0}]
                 ),
-            launch_ros.actions.Node(
-                package='cartographer_ros',
-                executable='cartographer_odom_preproc',
-                # output='screen',
-                parameters = [
-                    {'use_sim_time': True}],
-                ),
+            # launch_ros.actions.Node(
+            #     package='cartographer_ros',
+            #     executable='cartographer_odom_preproc',
+            #     # output='screen',
+            #     parameters = [
+            #         {'use_sim_time': True}],
+            #     ),
             ])
         ]
         #---------------cartographer-end---------------
