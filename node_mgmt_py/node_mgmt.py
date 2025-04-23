@@ -72,6 +72,10 @@ class NodeMgmt(Node):
         ]
         #---------------cartographer-end---------------
 
+        #---------------Navigation2-start--------------
+
+        #---------------Navigation2-end---------------
+
     def node_mgmt_callback(self, request, response):
         self.get_logger().info('Incoming request\n node_name: %s action: %s' % (request.node, request.action))
         node_name = request.node
