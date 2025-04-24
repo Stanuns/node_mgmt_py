@@ -11,6 +11,8 @@ import signal
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 import rclpy
 from rclpy.node import Node
@@ -49,7 +51,7 @@ class NodeMgmt(Node):
                 parameters = [{'use_sim_time': False}],
                 arguments=['-configuration_directory', cartographer_config_dir,
                         '-configuration_basename', cartographer_configuration_basename],
-                remappings=[('/imu', '/imu/data_raw')],
+                remappings=[('/imu', '/imu/data_raw')]
                 ),
             launch_ros.actions.Node(
                 package='cartographer_ros',
@@ -72,9 +74,51 @@ class NodeMgmt(Node):
         ]
         #---------------cartographer-end---------------
 
-        #---------------Navigation2-start--------------
-
-        #---------------Navigation2-end---------------
+        #---------------navigation2-start--------------
+        self.navigation2_running = False
+        self.navigation2_pre_pPool = None
+        map_dir = LaunchConfiguration(
+            'map',
+            default=os.path.join(
+                get_package_share_directory('map_server_extension'),
+                'maps',
+                'luxsharenanjinghall01.yaml')) 
+        
+        nav2_param_file_name = 'nav2_params_luxsharerobot.yaml'
+        nav2_param_dir = LaunchConfiguration(
+            'params_file',
+            default=os.path.join(
+                get_package_share_directory('open_source_slam_launch'),
+                'launch',
+                nav2_param_file_name))
+        nav2_launch_file_dir = os.path.join(get_package_share_directory('open_source_slam_launch'), 'launch')
+        DeclareLaunchArgument(
+            'map',
+            default_value=map_dir,
+            description='Full path to map file to load'),
+        DeclareLaunchArgument(
+            'params_file',
+            default_value=nav2_param_dir,
+            description='Full path to param file to load'),
+        use_sim_time = LaunchConfiguration('use_sim_time', default='false')
+        # DeclareLaunchArgument(
+        #     'use_sim_time',
+        #     default_value='false',
+        #     description='Use simulation (Gazebo) clock if true'),
+        self.navigation2_ld = [LaunchDescription([
+                # launch_ros.actions.Node(
+                    IncludeLaunchDescription(
+                        PythonLaunchDescriptionSource([nav2_launch_file_dir, '/luxsharerobot_bringup_launch.py']),
+                        launch_arguments={
+                            'map': map_dir,
+                            'use_sim_time': use_sim_time,
+                            'params_file': nav2_param_dir
+                            }.items(),
+                    )
+                # )
+            ])
+        ]
+        #---------------navigation2-end---------------
 
     def node_mgmt_callback(self, request, response):
         self.get_logger().info('Incoming request\n node_name: %s action: %s' % (request.node, request.action))
@@ -103,7 +147,9 @@ class NodeMgmt(Node):
             ld = self.cartographer_ld
             if_runnning = self.cartographer_running
         elif ld_name == "navigation2":
-            ld = None
+            ld = self.navigation2_ld
+            if_runnning = self.navigation2_running
+        else:
             pass
         
         if not if_runnning:
@@ -119,12 +165,16 @@ class NodeMgmt(Node):
             if ld_name == "cartographer":
                 self.cartographer_pre_pPool = pPool
             elif ld_name == "navigation2":
+                self.navigation2_pre_pPool = pPool
+            else:
                 pass
             return pPool, if_runnning
         elif if_runnning:
             if ld_name == "cartographer":
                 return self.cartographer_pre_pPool, if_runnning 
             elif ld_name == "navigation2":
+                return self.navigation2_pre_pPool, if_runnning 
+            else:
                 pass
 
 
@@ -144,6 +194,8 @@ class NodeMgmt(Node):
             if node_name == "cartographer":
                 self.cartographer_running = True
             elif node_name == "navigation2":
+                self.navigation2_running = True
+            else:
                 pass
         else:
             pass
@@ -167,6 +219,8 @@ class NodeMgmt(Node):
             if node_name == "cartographer":
                 self.cartographer_running = False
             elif node_name == "navigation2":
+                self.navigation2_running = False
+            else:
                 pass
         else:
             pass
