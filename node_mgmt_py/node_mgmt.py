@@ -8,11 +8,14 @@ import nest_asyncio
 import os
 import signal
 
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.substitutions import FindPackageShare
+from launch.substitutions import PathJoinSubstitution
+import yaml 
 
 import rclpy
 from rclpy.node import Node
@@ -77,13 +80,12 @@ class NodeMgmt(Node):
         #---------------navigation2-start--------------
         self.navigation2_running = False
         self.navigation2_pre_pPool = None
-        map_dir = LaunchConfiguration(
-            'map',
-            default=os.path.join(
-                get_package_share_directory('map_server_extension'),
-                'maps',
-                'luxsharenanjinghall01.yaml')) 
-        
+        # map_dir = LaunchConfiguration(
+        #     'map',
+        #     default=os.path.join(
+        #         get_package_share_directory('map_server_extension'),
+        #         'maps',
+        #         'luxsharenanjinghall01.yaml')),
         nav2_param_file_name = 'nav2_params_luxsharerobot.yaml'
         nav2_param_dir = LaunchConfiguration(
             'params_file',
@@ -92,10 +94,10 @@ class NodeMgmt(Node):
                 'launch',
                 nav2_param_file_name))
         nav2_launch_file_dir = os.path.join(get_package_share_directory('open_source_slam_launch'), 'launch')
-        DeclareLaunchArgument(
-            'map',
-            default_value=map_dir,
-            description='Full path to map file to load'),
+        # DeclareLaunchArgument(
+        #     'map',
+        #     default_value=map_dir,
+        #     description='Full path to map file to load'),
         DeclareLaunchArgument(
             'params_file',
             default_value=nav2_param_dir,
@@ -105,17 +107,36 @@ class NodeMgmt(Node):
         #     'use_sim_time',
         #     default_value='false',
         #     description='Use simulation (Gazebo) clock if true'),
-        self.navigation2_ld = [LaunchDescription([
-                # launch_ros.actions.Node(
-                    IncludeLaunchDescription(
-                        PythonLaunchDescriptionSource([nav2_launch_file_dir, '/luxsharerobot_bringup_launch.py']),
-                        launch_arguments={
-                            'map': map_dir,
-                            'use_sim_time': use_sim_time,
-                            'params_file': nav2_param_dir
-                            }.items(),
+        def load_map_config(context):
+            map_mgmt_path = os.path.join(
+                get_package_share_directory('map_server_extension'),
+                'params',
+                'map_mgmt.yaml'
+            )
+            with open(map_mgmt_path, 'r') as f:
+                map_name = yaml.safe_load(f)['map_mgmt_server']['ros__parameters']['current_map_name']
+            
+            return [
+                DeclareLaunchArgument(
+                    'map',
+                    default_value=os.path.join(
+                        get_package_share_directory('map_server_extension'),
+                        'maps',
+                        f'{map_name}.yaml'
                     )
-                # )
+                )
+            ]
+        self.navigation2_ld = [LaunchDescription([
+                OpaqueFunction(function=load_map_config),
+
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource([nav2_launch_file_dir, '/luxsharerobot_bringup_launch.py']),
+                    launch_arguments={
+                        'map': LaunchConfiguration('map'),
+                        'use_sim_time': use_sim_time,
+                        'params_file': nav2_param_dir
+                        }.items(),
+                )
             ])
         ]
         #---------------navigation2-end---------------
