@@ -142,23 +142,25 @@ class NodeMgmt(Node):
         #---------------navigation2-end---------------
 
     def node_mgmt_callback(self, request, response):
-        self.get_logger().info('Incoming request\n node_name: %s action: %s' % (request.node, request.action))
-        node_name = request.node
-        # pPool = self.get_process_pool(node_name)
+        try:
+            self.get_logger().info('Incoming request\n node_name: %s action: %s' % (request.node, request.action))
+            node_name = request.node
+            # pPool = self.get_process_pool(node_name)
 
-        if request.action == StartStop.Request().START:
-            self.process_start(node_name)
+            if request.action == StartStop.Request().START:
+                self.process_start(node_name)
+            elif request.action == StartStop.Request().STOP:
+                self.process_stop(node_name)
+            elif request.action == StartStop.Request().RESTART:
+                self.process_restart(node_name)
+            else:
+                raise ValueError(f"Invalid action: {request.action}")
+            
+            response.success = True
+        except Exception as e:  
+            self.get_logger().error(f'Error handling request: {str(e)}')
+            response.success = False      
 
-        elif request.action == StartStop.Request().STOP:
-            self.process_stop(node_name)
-
-        elif request.action == StartStop.Request().RESTART:
-
-            self.process_restart(node_name)
-        else:
-            pass
-
-        response.success = True;
         return response
     
     def get_process_pool(self, ld_name):
@@ -171,7 +173,7 @@ class NodeMgmt(Node):
             ld = self.navigation2_ld
             if_runnning = self.navigation2_running
         else:
-            pass
+            raise ValueError(f"Unknown node name: {ld_name}")
         
         if not if_runnning:
             # Construct launch service pool. Each launch service can handle one launch description
@@ -200,58 +202,67 @@ class NodeMgmt(Node):
 
 
     def process_start(self, node_name):
-        self.get_logger().info('node start---------------->')
-        pPool, if_runnning = self.get_process_pool(node_name)
+        try:
+            self.get_logger().info(f'Starting {node_name}----->')
+            pPool, if_runnning = self.get_process_pool(node_name)
+            #debug
+            print("----->process_start: "+str(pPool[0].pid))
 
-        #debug
-        print("----->process_start: "+str(pPool[0].pid))
+            if (pPool[0].pid is None) and (not if_runnning): 
+                for p in pPool:
+                    print("----->before node starting: "+str(p.pid))
+                    p.start()
+                    print("----->after node starting: "+str(p.pid))
 
-        if (pPool[0].pid is None) and (not if_runnning): 
-            for p in pPool:
-                print("----->before node starting: "+str(p.pid))
-                p.start()
-                print("----->after node starting: "+str(p.pid))
-
-            if node_name == "cartographer":
-                self.cartographer_running = True
-            elif node_name == "navigation2":
-                self.navigation2_running = True
+                if node_name == "cartographer":
+                    self.cartographer_running = True
+                elif node_name == "navigation2":
+                    self.navigation2_running = True
+                else:
+                    pass
             else:
                 pass
-        else:
-            pass
+        except Exception as e:
+            self.get_logger().error(f'Failed to start {node_name}: {str(e)}')
+            raise
 
     def process_stop(self, node_name):
-        self.get_logger().info('node stop---------------->')
-        pPool, if_runnning = self.get_process_pool(node_name)
+        try:
+            self.get_logger().info(f'Stopping {node_name}----->')
+            pPool, if_runnning = self.get_process_pool(node_name)
+            #debug
+            print("----->process_stop: "+str(pPool[0].pid))
 
-        #debug
-        print("----->process_stop: "+str(pPool[0].pid))
+            if (pPool[0].pid is not None) and (if_runnning): 
+                for p in pPool:
+                    print("----->before node stopping: "+str(p.pid))
+                    # use SIGINT instead of SIGTERM to stop child processes ahead of launch service
+                    os.kill(p.pid, signal.SIGINT)
+                    print("----->after node stopping: "+str(p.pid))
+                for p in pPool:
+                    p.join()
 
-        if (pPool[0].pid is not None) and (if_runnning): 
-            for p in pPool:
-                print("----->before node stopping: "+str(p.pid))
-                # use SIGINT instead of SIGTERM to stop child processes ahead of launch service
-                os.kill(p.pid, signal.SIGINT)
-                print("----->after node stopping: "+str(p.pid))
-            for p in pPool:
-                p.join()
-
-            if node_name == "cartographer":
-                self.cartographer_running = False
-            elif node_name == "navigation2":
-                self.navigation2_running = False
+                if node_name == "cartographer":
+                    self.cartographer_running = False
+                elif node_name == "navigation2":
+                    self.navigation2_running = False
+                else:
+                    pass
             else:
                 pass
-        else:
-            pass
+        except Exception as e:
+            self.get_logger().error(f'Failed to stop {node_name}: {str(e)}')
+            raise
 
     def process_restart(self, node_name):
-        self.get_logger().info('node restart---------------->')
-        self.process_stop(node_name)
-        time.sleep(1)
-        self.process_start(node_name)
-
+        try:
+            self.get_logger().info(f'Restarting {node_name}----->')
+            self.process_stop(node_name)
+            time.sleep(1)
+            self.process_start(node_name)
+        except Exception as e:
+            self.get_logger().error(f'Failed to restart {node_name}: {str(e)}')
+            raise
 
         
 
