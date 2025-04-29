@@ -70,8 +70,13 @@ ros2 service call /finish_trajectory cartographer_ros_msgs/srv/FinishTrajectory 
 ros2 service call /start_trajectory cartographer_ros_msgs/srv/StartTrajectory "{configuration_directory: '/home/sunwei/robot_ws/install/open_source_slam_launch/share/open_source_slam_launch/config/', configuration_basename: 'cartographer_mapping.lua', use_initial_pose: true, initial_pose: {position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}, relative_to_trajectory_id: 0}"
 ```
 
-## 3. 采用管理进程pid方式实现node管理
+## 3. 采用管理进程pid方式实现node管理 本package包所采用的方式
 [reference](https://haoguangyang.github.io/robotics%20notes/gists/programmatically-start-stop-nodes/)
+
+启动节点管理service server节点：
+```bashrc
+ros2 run node_mgmt_py node_mgmt_service
+```
 
 调用service名称: /node_start_stop
 ### 3.1 建图启停
