@@ -28,6 +28,11 @@ class NodeMgmt(Node):
     def __init__(self):
         super().__init__('node_mgmt')
         self.srv = self.create_service(StartStop, 'node_start_stop', self.node_mgmt_callback)
+        self.action_ma = {
+                StartStop.Request().START: "START",
+                StartStop.Request().STOP: "STOP",
+                StartStop.Request().RESTART: "RESTART"
+        }
 
         #---------------cartographer-start---------------
         self.cartographer_running = False
@@ -157,9 +162,12 @@ class NodeMgmt(Node):
                 raise ValueError(f"Invalid action: {request.action}")
             
             response.success = True
+            action_str = self.action_ma.get(request.action, "UNKNOWN")
+            response.message = f'{action_str} {node_name} successfully'
         except Exception as e:  
             self.get_logger().error(f'Error handling request: {str(e)}')
-            response.success = False      
+            response.success = False   
+            response.message = f'Error handling request: {str(e)}'
 
         return response
     
